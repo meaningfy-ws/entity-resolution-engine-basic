@@ -201,7 +201,7 @@ class AbstractPubSubResolutionService(AbstractService):
                         if request is None:
                             continue  # timeout or shutdown
                         log.debug(
-                            f"PubSubResolutionService: dispatching request id: {request.ereRequestId}"
+                            f"PubSubResolutionService: dispatching request id: {request.ere_request_id}"
                         )
                         executor.submit(self._process_push_helper, request)
                     except asyncio.TimeoutError:
@@ -221,10 +221,10 @@ class AbstractPubSubResolutionService(AbstractService):
         """
 
         log.debug(
-            f"Service: sending request id: {request.ereRequestId} to the resolver"
+            f"Service: sending request id: {request.ere_request_id} to the resolver"
         )
         response = self.resolver.process_request(request)
         log.debug(
-            f"Service: got response for request id: {request.ereRequestId} from the resolver, pushing it back"
+            f"Service: got response for request id: {request.ere_request_id} from the resolver, pushing it back"
         )
         self._push_response(response)

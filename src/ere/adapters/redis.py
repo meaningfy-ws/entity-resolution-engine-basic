@@ -68,11 +68,11 @@ class RedisEREClient(AbstractClient):
 
     def push_request(self, request: ERERequest):
         log.debug(
-            f"Redis ERE client, pushing request id: {request.ereRequestId} to channel: {self.request_channel_id}"
+            f"Redis ERE client, pushing request id: {request.ere_request_id} to channel: {self.request_channel_id}"
         )
         msg_json_str = _linkml_dumper.dumps(request)
         self._redis_client.lpush(self.request_channel_id, msg_json_str)
-        log.debug(f"Redis ERE client, request id: {request.ereRequestId} sent")
+        log.debug(f"Redis ERE client, request id: {request.ere_request_id} sent")
 
     def subscribe_responses(self) -> Generator[EREResponse, None, None]:
         while True:
@@ -83,7 +83,7 @@ class RedisEREClient(AbstractClient):
                 _, raw_msg = self._redis_client.brpop(self.response_channel_id)
                 response = get_response_from_message(raw_msg, self.character_encoding)
                 log.debug(
-                    f"Redis ERE client, received response id: {response.ereRequestId}"
+                    f"Redis ERE client, received response id: {response.ere_request_id}"
                 )
                 yield response
             except (ConnectionError, TimeoutError) as ex:
