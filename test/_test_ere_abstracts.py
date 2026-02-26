@@ -64,19 +64,19 @@ def test_known_entity_resolution(mock_ere_client: AbstractClient):
     )
 
     test_entity_mention = EntityMention(
-        identifier=EntityMentionIdentifier(
-            requestId=test_entity_uri,
-            sourceId="test-module",
-            entityType=f"{ORG_NS}Organization",
+        identifiedBy=EntityMentionIdentifier(
+            request_id=test_entity_uri,
+            source_id="test-module",
+            entity_type=f"{ORG_NS}Organization",
         ),
         # Not important here, the mock resolver just looks up static test data
         # TODO: validation of ID/content match
-        contentType="text/turtle",
+        content_type="text/turtle",
         content="<foo>",
     )
 
     test_req = EntityMentionResolutionRequest(
-        entityMention=test_entity_mention,
+        entity_mention=test_entity_mention,
         ere_request_id="test-known-entity-resolution-001",
         timestamp=create_timestamp(),
     )
@@ -112,19 +112,19 @@ def test_unknown_entity_resolution(mock_ere_client: AbstractClient):
     test_entity_uri = f"{ORG_NS}foo_organization_999"
 
     test_entity_mention = EntityMention(
-        identifier=EntityMentionIdentifier(
-            requestId=test_entity_uri,
-            sourceId="test-module",
-            entityType=f"{ORG_NS}Organization",
+        identifiedBy=EntityMentionIdentifier(
+            request_id=test_entity_uri,
+            source_id="test-module",
+            entity_type=f"{ORG_NS}Organization",
         ),
         # Not important here, the mock resolver just looks up static test data
         # TODO: validation of ID/content match
-        contentType="text/turtle",
+        content_type="text/turtle",
         content="<foo>",
     )
 
     test_req = EntityMentionResolutionRequest(
-        entityMention=test_entity_mention,
+        entity_mention=test_entity_mention,
         ere_request_id="test-unknown-entity-resolution-001",
         timestamp=create_timestamp(),
     )
@@ -197,11 +197,11 @@ def test_ere_replies_with_error_response_to_malformed_request(
     # Send a malformed request (content type is unsupported)
     malformed_request = EntityMentionResolutionRequest(
         ere_request_id="test-bad-resolution-req-001",
-        entityMention=EntityMention(
-            identifier=EntityMentionIdentifier(
-                requestId="", sourceId="test-module", entityType="FooType"
+        entity_mention=EntityMention(
+            identifiedBy=EntityMentionIdentifier(
+                request_id="", source_id="test-module", entity_type="FooType"
             ),  # Malformed part
-            contentType="text/turtle",
+            content_type="text/turtle",
             content="<foo>",
         ),
         timestamp=create_timestamp(),

@@ -59,17 +59,17 @@ def step_submit_known_entity_request(entity_id, resolution_context):
 
     # Construct request using test data conventions
     entity_mention = EntityMention(
-        identifier=EntityMentionIdentifier(
-            requestId=entity_id,
-            sourceId="bdd-test",
-            entityType=f"{ORG_NS}Organization",
+        identifiedBy=EntityMentionIdentifier(
+            request_id=entity_id,
+            source_id="bdd-test",
+            entity_type=f"{ORG_NS}Organization",
         ),
-        contentType="text/turtle",
+        content_type="text/turtle",
         content="<test-content>",
     )
 
     request = EntityMentionResolutionRequest(
-        entityMention=entity_mention,
+        entity_mention=entity_mention,
         ere_request_id=f"bdd-test-{entity_id}",
         timestamp=create_timestamp(),
     )
@@ -86,17 +86,17 @@ def step_submit_unknown_entity_request(resolution_context):
     unknown_entity_id = "http://data.europa.eu/a4g/resource/unknown_entity_9999"
 
     entity_mention = EntityMention(
-        identifier=EntityMentionIdentifier(
-            requestId=unknown_entity_id,
-            sourceId="bdd-test",
-            entityType=f"{ORG_NS}Organization",
+        identifiedBy=EntityMentionIdentifier(
+            request_id=unknown_entity_id,
+            source_id="bdd-test",
+            entity_type=f"{ORG_NS}Organization",
         ),
-        contentType="text/turtle",
+        content_type="text/turtle",
         content="<test-content>",
     )
 
     request = EntityMentionResolutionRequest(
-        entityMention=entity_mention,
+        entity_mention=entity_mention,
         ere_request_id="bdd-test-unknown-entity",
         timestamp=create_timestamp(),
     )
@@ -112,17 +112,17 @@ def step_submit_malformed_request(resolution_context):
 
     # Use an unsupported entity type to trigger an error
     entity_mention = EntityMention(
-        identifier=EntityMentionIdentifier(
-            requestId="http://example.com/test-entity",
-            sourceId="bdd-test",
-            entityType="http://example.com/UnsupportedType",  # Not in SUPPORTED_ENTITY_TYPES
+        identifiedBy=EntityMentionIdentifier(
+            request_id="http://example.com/test-entity",
+            source_id="bdd-test",
+            entity_type="http://example.com/UnsupportedType",  # Not in SUPPORTED_ENTITY_TYPES
         ),
-        contentType="text/turtle",
+        content_type="text/turtle",
         content="<test-content>",
     )
 
     request = EntityMentionResolutionRequest(
-        entityMention=entity_mention,
+        entity_mention=entity_mention,
         ere_request_id="bdd-test-malformed",
         timestamp=create_timestamp(),
     )

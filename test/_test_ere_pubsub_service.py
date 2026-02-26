@@ -53,18 +53,18 @@ def test_known_entity_resolution(mock_ere_client: AbstractClient):
     )
 
     test_entity_mention = EntityMention(
-        identifier=EntityMentionIdentifier(
-            requestId=test_entity_uri,
-            sourceId="test-module",
-            entityType=f"{ORG_NS}Organization",
+        identifiedBy=EntityMentionIdentifier(
+            request_id=test_entity_uri,
+            source_id="test-module",
+            entity_type=f"{ORG_NS}Organization",
         ),
         # Not important here, the mock resolver just looks up static test data
         # TODO: validation of ID/content match
-        contentType="text/turtle",
+        content_type="text/turtle",
         content="<foo>",
     )
     test_req = EntityMentionResolutionRequest(
-        entityMention=test_entity_mention,
+        entity_mention=test_entity_mention,
         ere_request_id="test-known-entity-resolution-001",
         timestamp=create_timestamp(),
     )
