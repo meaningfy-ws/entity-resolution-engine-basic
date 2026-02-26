@@ -8,12 +8,14 @@ import pytest
 from assertpy import assert_that
 from pytest_bdd import given, when, then, parsers
 
-from ere.models.core import (
-    EntityMention,
-    EntityMentionIdentifier,
+from erspec.models.ere import (
     EntityMentionResolutionRequest,
     EntityMentionResolutionResponse,
     EREErrorResponse,
+)
+from erspec.models.core import (
+    EntityMention,
+    EntityMentionIdentifier,
 )
 from ere_test import MockEREClient, ORG_NS, create_timestamp
 
@@ -169,7 +171,7 @@ def step_response_has_singleton_cluster(resolution_context):
     # A singleton cluster should have exactly one candidate
     # (the newly created cluster for the unknown entity)
     assert_that(len(response.candidates)).is_equal_to(1)
-    assert_that(response.candidates[0].confidenceScore).is_equal_to(1.0)
+    assert_that(response.candidates[0].confidence_score).is_equal_to(1.0)
 
 
 @then("I receive an error response")

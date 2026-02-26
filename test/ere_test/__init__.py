@@ -167,12 +167,12 @@ class MockResolver ( AbstractResolver ):
 
 		# Transform them into model objects
 		candidate_clusters = [
-			ClusterReference ( clusterId = clusterId, confidenceScore = score ) for clusterId, score in candidate_clusters 
+			ClusterReference ( cluster_id = clusterId, confidence_score = score, similarity_score = score ) for clusterId, score in candidate_clusters 
 		]
 
 		result = EntityMentionResolutionResponse (
 			ere_request_id = request.ere_request_id,
-			entityMentionId = entity_id,
+			entity_mention_id = entity_id,
 			candidates = candidate_clusters,
 			timestamp = create_timestamp ()
 		)

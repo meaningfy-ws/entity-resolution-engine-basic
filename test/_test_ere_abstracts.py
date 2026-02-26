@@ -30,15 +30,17 @@ from pyparsing import Path
 from rdflib import Graph
 
 from ere.adapters.redis import AbstractClient
-from ere.models.core import (
+from erspec.models.ere import (
     EntityMentionResolutionRequest,
     EntityMentionResolutionResponse,
-    EntityMention,
-    EntityMentionIdentifier,
-    ClusterReference,
     EREErrorResponse,
     # FullRebuildRequest,  # TODO: Uncomment when available in erspec
     # FullRebuildResponse,  # TODO: Uncomment when available in erspec
+)
+from erspec.models.core import (
+    EntityMention,
+    EntityMentionIdentifier,
+    ClusterReference,
 )
 
 
@@ -85,7 +87,7 @@ def test_known_entity_resolution(mock_ere_client: AbstractClient):
     )
 
     assert_that(
-        entity_resolution.entityMentionId,
+        entity_resolution.entity_mention_id,
         "Resolution response has the source entity mention ID",
     ).is_equal_to(test_entity_mention.identifier)
 

@@ -20,13 +20,15 @@ from testcontainers.redis import RedisContainer
 
 from ere.adapters.redis import AbstractClient
 from ere.adapters.redis import RedisEREClient
-from ere.models.core import (
+from erspec.models.ere import (
     EntityMentionResolutionRequest,
     EntityMentionResolutionResponse,
+    EREErrorResponse,
+)
+from erspec.models.core import (
     ClusterReference,
     EntityMention,
     EntityMentionIdentifier,
-    EREErrorResponse,
 )
 from ere.services.redis import RedisResolutionService
 
@@ -44,12 +46,14 @@ def test_known_entity_resolution(mock_ere_client: AbstractClient):
     )
 
     expected_cluster = ClusterReference(
-        clusterId=f"{EPD_NS}id_2023-S-210-662860_ReviewerOrganisation_LLhJHMi9mby8ixbkfyGoWj_Cluster",
-        confidenceScore=0.98,
+        cluster_id=f"{EPD_NS}id_2023-S-210-662860_ReviewerOrganisation_LLhJHMi9mby8ixbkfyGoWj_Cluster",
+        confidence_score=0.98,
+        similarity_score=0.98,
     )
     expected_alt_cluster = ClusterReference(
-        clusterId=f"{EPD_NS}id_2023-S-210-661238_ReviewerOrganisation_LLhJHMi9mby8ixbkfyGoWj_alt_Cluster",
-        confidenceScore=0.80,
+        cluster_id=f"{EPD_NS}id_2023-S-210-661238_ReviewerOrganisation_LLhJHMi9mby8ixbkfyGoWj_alt_Cluster",
+        confidence_score=0.80,
+        similarity_score=0.80,
     )
 
     test_entity_mention = EntityMention(
@@ -75,7 +79,7 @@ def test_known_entity_resolution(mock_ere_client: AbstractClient):
     )
 
     assert_that(
-        entity_resolution.entityMentionId,
+        entity_resolution.entity_mention_id,
         "Resolution response has the source entity mention ID",
     ).is_equal_to(test_entity_mention.identifier)
 
