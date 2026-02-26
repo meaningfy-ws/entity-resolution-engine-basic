@@ -68,7 +68,7 @@ def step_submit_known_entity_request(entity_id, resolution_context):
 
     request = EntityMentionResolutionRequest(
         entityMention=entity_mention,
-        ereRequestId=f"bdd-test-{entity_id}",
+        ere_request_id=f"bdd-test-{entity_id}",
         timestamp=create_timestamp(),
     )
 
@@ -95,7 +95,7 @@ def step_submit_unknown_entity_request(resolution_context):
 
     request = EntityMentionResolutionRequest(
         entityMention=entity_mention,
-        ereRequestId="bdd-test-unknown-entity",
+        ere_request_id="bdd-test-unknown-entity",
         timestamp=create_timestamp(),
     )
 
@@ -121,7 +121,7 @@ def step_submit_malformed_request(resolution_context):
 
     request = EntityMentionResolutionRequest(
         entityMention=entity_mention,
-        ereRequestId="bdd-test-malformed",
+        ere_request_id="bdd-test-malformed",
         timestamp=create_timestamp(),
     )
 
@@ -133,12 +133,12 @@ def step_submit_malformed_request(resolution_context):
 def step_receive_resolution_response(resolution_context):
     """Verify that a response was received."""
     client = resolution_context["client"]
-    request_id = resolution_context["last_request"].ereRequestId
+    request_id = resolution_context["last_request"].ere_request_id
 
     # Collect responses until we find the one for our request
     response = None
     for resp in client.subscribe_responses():
-        if resp.ereRequestId == request_id:
+        if resp.ere_request_id == request_id:
             response = resp
             break
 
@@ -176,18 +176,18 @@ def step_response_has_singleton_cluster(resolution_context):
 def step_receive_error_response(resolution_context):
     """Verify that an error response was received."""
     client = resolution_context["client"]
-    request_id = resolution_context["last_request"].ereRequestId
+    request_id = resolution_context["last_request"].ere_request_id
 
     # Collect responses until we find the one for our request
     response = None
     for resp in client.subscribe_responses():
-        if resp.ereRequestId == request_id:
+        if resp.ere_request_id == request_id:
             response = resp
             break
 
     assert_that(response).is_not_none()
     assert_that(response).is_instance_of(EREErrorResponse)
-    assert_that(response.errorTitle).is_not_none()
-    assert_that(response.errorDetail).is_not_none()
+    assert_that(response.error_title).is_not_none()
+    assert_that(response.error_detail).is_not_none()
 
     resolution_context["last_response"] = response

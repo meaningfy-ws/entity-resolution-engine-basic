@@ -13,7 +13,7 @@ import pytest
 from assertpy import assert_that
 from ere_test import EPD_NS, ORG_NS, MockResolver, catch_response, create_timestamp
 
-from ere.entrypoints import AbstractClient
+from ere.adapters.redis import AbstractClient
 from ere.models.core import (
     EntityMentionResolutionRequest,
     EntityMentionResolutionResponse,
@@ -60,13 +60,13 @@ def test_known_entity_resolution(mock_ere_client: AbstractClient):
     )
     test_req = EntityMentionResolutionRequest(
         entityMention=test_entity_mention,
-        ereRequestId="test-known-entity-resolution-001",
+        ere_request_id="test-known-entity-resolution-001",
         timestamp=create_timestamp(),
     )
 
     mock_ere_client.push_request(test_req)
     entity_resolution: EntityMentionResolutionResponse = catch_response(
-        mock_ere_client, test_req.ereRequestId, EntityMentionResolutionResponse
+        mock_ere_client, test_req.ere_request_id, EntityMentionResolutionResponse
     )
 
     assert_that(
@@ -131,14 +131,14 @@ class FooPubSubResolutionService(AbstractPubSubResolutionService):
         log.debug("Service: pulling request from queue")
         # Needs to go in a thread, in order to not block the event loop in waiting
         request = await asyncio.to_thread(guarded_get)
-        id = request.ereRequestId if request else "None"
+        id = request.ere_request_id if request else "None"
         log.debug(f"Service: got a request from queue, id: {id}")
         return request
 
     def _push_response(self, response: EREResponse):
-        log.debug(f"Service: pushing response to queue, id: {response.ereRequestId}")
+        log.debug(f"Service: pushing response to queue, id: {response.ere_request_id}")
         _response_queue.put_nowait(response)
-        log.debug(f"Service: pushed response to queue, id: {response.ereRequestId}")
+        log.debug(f"Service: pushed response to queue, id: {response.ere_request_id}")
 
 
 class FooPubSubClient(AbstractClient):
@@ -150,13 +150,13 @@ class FooPubSubClient(AbstractClient):
     """
 
     def push_request(self, request: ERERequest):
-        log.debug(f"Client: pushing request to queue, id: {request.ereRequestId}")
+        log.debug(f"Client: pushing request to queue, id: {request.ere_request_id}")
         _request_queue.put_nowait(request)
-        log.debug(f"Client: pushed request to queue, id: {request.ereRequestId}")
+        log.debug(f"Client: pushed request to queue, id: {request.ere_request_id}")
 
     def subscribe_responses(self) -> Generator[EREResponse, None, None]:
         while True:
             log.debug("Client: waiting for response from queue")
             response = _response_queue.get()
-            log.debug(f"Client: got a response from queue, id: {response.ereRequestId}")
+            log.debug(f"Client: got a response from queue, id: {response.ere_request_id}")
             yield response

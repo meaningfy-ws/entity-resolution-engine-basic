@@ -19,20 +19,20 @@ class MockResolver:
     """
 
     def process_request(self, request: ERERequest) -> EREResponse:
-        request_id = getattr(request, "ereRequestId", "unknown")
+        request_id = getattr(request, "ere_request_id", "unknown")
         log.warning(
             "MockResolver.process_request: returning placeholder error response "
             "for request_id=%s — wire a real resolver to enable resolution.",
             request_id,
         )
         return EREErrorResponse(
-            ereRequestId=request_id,
-            errorTitle="Mock resolver — not implemented",
-            errorDetail=(
+            ere_request_id=request_id,
+            error_title="Mock resolver — not implemented",
+            error_detail=(
                 "This ERE instance is running with the MockResolver placeholder. "
                 "No resolution logic has been configured."
             ),
-            errorType="NotImplementedError",
+            error_type="NotImplementedError",
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
 

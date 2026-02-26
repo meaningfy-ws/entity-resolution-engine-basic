@@ -29,7 +29,7 @@ from ere_test import (
 from pyparsing import Path
 from rdflib import Graph
 
-from ere.entrypoints import AbstractClient
+from ere.adapters.redis import AbstractClient
 from ere.models.core import (
     EntityMentionResolutionRequest,
     EntityMentionResolutionResponse,
@@ -37,8 +37,8 @@ from ere.models.core import (
     EntityMentionIdentifier,
     ClusterReference,
     EREErrorResponse,
-    FullRebuildRequest,
-    FullRebuildResponse,
+    # FullRebuildRequest,  # TODO: Uncomment when available in erspec
+    # FullRebuildResponse,  # TODO: Uncomment when available in erspec
 )
 
 
@@ -75,13 +75,13 @@ def test_known_entity_resolution(mock_ere_client: AbstractClient):
 
     test_req = EntityMentionResolutionRequest(
         entityMention=test_entity_mention,
-        ereRequestId="test-known-entity-resolution-001",
+        ere_request_id="test-known-entity-resolution-001",
         timestamp=create_timestamp(),
     )
 
     mock_ere_client.push_request(test_req)
     entity_resolution = catch_response(
-        mock_ere_client, test_req.ereRequestId, EntityMentionResolutionResponse
+        mock_ere_client, test_req.ere_request_id, EntityMentionResolutionResponse
     )
 
     assert_that(
@@ -123,13 +123,13 @@ def test_unknown_entity_resolution(mock_ere_client: AbstractClient):
 
     test_req = EntityMentionResolutionRequest(
         entityMention=test_entity_mention,
-        ereRequestId="test-unknown-entity-resolution-001",
+        ere_request_id="test-unknown-entity-resolution-001",
         timestamp=create_timestamp(),
     )
 
     mock_ere_client.push_request(test_req)
     entity_resolution = catch_response(
-        mock_ere_client, test_req.ereRequestId, EntityMentionResolutionResponse
+        mock_ere_client, test_req.ere_request_id, EntityMentionResolutionResponse
     )
 
     candidate_clusters = entity_resolution.candidates
@@ -148,39 +148,42 @@ def test_unknown_entity_resolution(mock_ere_client: AbstractClient):
     ).is_equal_to(1)
 
 
-def test_ere_acknowledges_rebuild_request(mock_ere_client: AbstractClient):
-    """
-    Scenario: The ERE acknowledges a rebuild request
-    """
+# TODO: Uncomment when FullRebuildRequest/Response are available in erspec
+# def test_ere_acknowledges_rebuild_request(mock_ere_client: AbstractClient):
+#     """
+#     Scenario: The ERE acknowledges a rebuild request
+#     """
+# 
+#     rebuild_request = FullRebuildRequest(
+#         ere_request_id="test-ere-acknowledges-rebuild-request-001",
+#         timestamp=create_timestamp(),
+#     )
+# 
+#     mock_ere_client.push_request(rebuild_request)
+# 
+#     # Does all the assertions we want here
+#     catch_response(mock_ere_client, rebuild_request.ere_request_id, FullRebuildResponse)
 
-    rebuild_request = FullRebuildRequest(
-        ereRequestId="test-ere-acknowledges-rebuild-request-001",
-        timestamp=create_timestamp(),
-    )
 
-    mock_ere_client.push_request(rebuild_request)
-
-    # Does all the assertions we want here
-    catch_response(mock_ere_client, rebuild_request.ereRequestId, FullRebuildResponse)
-
-
-def test_ere_still_working_after_rebuild(mock_ere_client: AbstractClient):
-    """
-    Scenario: The ERE keeps resolving entities as usually after a rebuild request
-    """
-
-    # First, send a rebuild request
-    rebuild_request = FullRebuildRequest(
-        ereRequestId="test-ere-still-working-after-rebuild-001",
-        timestamp=create_timestamp(),
-    )
-
-    mock_ere_client.push_request(rebuild_request)
-    catch_response(mock_ere_client, rebuild_request.ereRequestId, FullRebuildResponse)
-
-    # Now just repeat previous tests
-    test_known_entity_resolution(mock_ere_client)
-    test_unknown_entity_resolution(mock_ere_client)
+# TODO: Uncomment when FullRebuildRequest/Response are available in erspec
+# # TODO: Uncomment when FullRebuildRequest/Response are available in erspec
+# def test_ere_still_working_after_rebuild(mock_ere_client: AbstractClient):
+#     """
+#     Scenario: The ERE keeps resolving entities as usually after a rebuild request
+#     """
+# 
+#     # First, send a rebuild request
+#     rebuild_request = FullRebuildRequest(
+#         ere_request_id="test-ere-still-working-after-rebuild-001",
+#         timestamp=create_timestamp(),
+#     )
+# 
+#     mock_ere_client.push_request(rebuild_request)
+#     catch_response(mock_ere_client, rebuild_request.ere_request_id, FullRebuildResponse)
+# 
+#     # Now just repeat previous tests
+#     test_known_entity_resolution(mock_ere_client)
+#     test_unknown_entity_resolution(mock_ere_client)
 
 
 def test_ere_replies_with_error_response_to_malformed_request(
@@ -191,7 +194,7 @@ def test_ere_replies_with_error_response_to_malformed_request(
     """
     # Send a malformed request (content type is unsupported)
     malformed_request = EntityMentionResolutionRequest(
-        ereRequestId="test-bad-resolution-req-001",
+        ere_request_id="test-bad-resolution-req-001",
         entityMention=EntityMention(
             identifier=EntityMentionIdentifier(
                 requestId="", sourceId="test-module", entityType="FooType"
@@ -204,16 +207,16 @@ def test_ere_replies_with_error_response_to_malformed_request(
 
     mock_ere_client.push_request(malformed_request)
     error_response = catch_response(
-        mock_ere_client, malformed_request.ereRequestId, EREErrorResponse
+        mock_ere_client, malformed_request.ere_request_id, EREErrorResponse
     )
 
     assert_that(
-        error_response.errorTitle, "The response has the expected error title"
+        error_response.error_title, "The response has the expected error title"
     ).contains("MockResolver, unsupported entity type")
     assert_that(
-        error_response.errorDetail, "The response has the expected error detail"
+        error_response.error_detail, "The response has the expected error detail"
     ).contains("MockResolver, unsupported entity type")
-    assert_that(error_response.errorType, "The response has an error type").is_equal_to(
+    assert_that(error_response.error_type, "The response has an error type").is_equal_to(
         "ValueError"
     )
 

@@ -18,7 +18,7 @@ from ere_test import (
 )
 from testcontainers.redis import RedisContainer
 
-from ere.entrypoints import AbstractClient
+from ere.adapters.redis import AbstractClient
 from ere.adapters.redis import RedisEREClient
 from ere.models.core import (
     EntityMentionResolutionRequest,
@@ -65,13 +65,13 @@ def test_known_entity_resolution(mock_ere_client: AbstractClient):
     )
     test_req = EntityMentionResolutionRequest(
         entityMention=test_entity_mention,
-        ereRequestId="test-known-entity-resolution-001",
+        ere_request_id="test-known-entity-resolution-001",
         timestamp=create_timestamp(),
     )
 
     mock_ere_client.push_request(test_req)
     entity_resolution = catch_response(
-        mock_ere_client, test_req.ereRequestId, EntityMentionResolutionResponse
+        mock_ere_client, test_req.ere_request_id, EntityMentionResolutionResponse
     )
 
     assert_that(
@@ -95,7 +95,7 @@ def test_ere_replies_with_error_response_to_malformed_request(
     """
     # Send a malformed request (content type is unsupported)
     malformed_request = EntityMentionResolutionRequest(
-        ereRequestId="test-bad-resolution-req-001",
+        ere_request_id="test-bad-resolution-req-001",
         entityMention=EntityMention(
             identifier=EntityMentionIdentifier(
                 requestId="", sourceId="test-module", entityType="FooType"
@@ -108,16 +108,16 @@ def test_ere_replies_with_error_response_to_malformed_request(
 
     mock_ere_client.push_request(malformed_request)
     error_response = catch_response(
-        mock_ere_client, malformed_request.ereRequestId, EREErrorResponse
+        mock_ere_client, malformed_request.ere_request_id, EREErrorResponse
     )
 
     assert_that(
-        error_response.errorTitle, "The response has the expected error title"
+        error_response.error_title, "The response has the expected error title"
     ).contains("MockResolver, unsupported entity type")
     assert_that(
-        error_response.errorDetail, "The response has the expected error detail"
+        error_response.error_detail, "The response has the expected error detail"
     ).contains("MockResolver, unsupported entity type")
-    assert_that(error_response.errorType, "The response has an error type").is_equal_to(
+    assert_that(error_response.error_type, "The response has an error type").is_equal_to(
         "ValueError"
     )
 

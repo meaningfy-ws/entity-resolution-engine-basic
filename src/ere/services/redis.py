@@ -79,13 +79,13 @@ class RedisResolutionService(AbstractPubSubResolutionService):
         )
 
         request = get_request_from_message(raw_msg, self.character_encoding)
-        log.debug(f"RedisResolutionService, pulled request id: {request.ereRequestId}")
+        log.debug(f"RedisResolutionService, pulled request id: {request.ere_request_id}")
         return request
 
     def _push_response(self, response: EREResponse):
         log.debug(
-            f"RedisResolutionService, pushing response id: {response.ereRequestId} to channel: {self.response_channel_id}"
+            f"RedisResolutionService, pushing response id: {response.ere_request_id} to channel: {self.response_channel_id}"
         )
         msg_json_str = _linkml_dumper.dumps(response)
         self._redis_client.lpush(self.response_channel_id, msg_json_str)
-        log.debug(f"RedisResolutionService, response id: {response.ereRequestId} sent")
+        log.debug(f"RedisResolutionService, response id: {response.ere_request_id} sent")
