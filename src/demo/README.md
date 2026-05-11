@@ -26,8 +26,8 @@ Configuration is loaded from `infra/.env` (or environment variables):
 | `REDIS_PORT` | `6379` | Redis port |
 | `REDIS_DB` | `0` | Redis database number |
 | `REDIS_PASSWORD` | `changeme` | Redis password |
-| `REQUEST_QUEUE` | `ere_requests` | Queue name for incoming requests |
-| `RESPONSE_QUEUE` | `ere_responses` | Queue name for outgoing responses |
+| `ERSYS_REQUEST_QUEUE` | `ere_requests` | Queue name for incoming requests |
+| `ERSYS_RESPONSE_QUEUE` | `ere_responses` | Queue name for outgoing responses |
 
 The script tries the configured host first, then falls back to `localhost` if the host is `redis` (Docker), making it work both locally and in Docker.
 

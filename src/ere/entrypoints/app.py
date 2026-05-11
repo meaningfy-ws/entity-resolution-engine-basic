@@ -7,8 +7,8 @@ and produces responses back to another Redis queue.
 Configuration is read from environment variables or CLI arguments.
 
 Environment variables:
-    REQUEST_QUEUE         Redis queue for inbound requests (default: ere_requests)
-    RESPONSE_QUEUE        Redis queue for outbound responses (default: ere_responses)
+    ERSYS_REQUEST_QUEUE   Redis queue for inbound requests (default: ere_requests)
+    ERSYS_RESPONSE_QUEUE  Redis queue for outbound responses (default: ere_responses)
     REDIS_HOST            Redis hostname (default: localhost)
     REDIS_PORT            Redis port (default: 6379)
     REDIS_DB              Redis DB index (default: 0)
@@ -71,8 +71,8 @@ def main() -> None:
 
     # Read configuration from environment or CLI
     redis_config = RedisConnectionConfig.from_env()
-    request_queue = os.environ.get("REQUEST_QUEUE", "ere_requests")
-    response_queue = os.environ.get("RESPONSE_QUEUE", "ere_responses")
+    request_queue = os.environ.get("ERSYS_REQUEST_QUEUE", "ere_requests")
+    response_queue = os.environ.get("ERSYS_RESPONSE_QUEUE", "ere_responses")
 
     # Config file paths: CLI takes precedence over environment
     rdf_mapping_path = args.rdf_mapping_path or os.environ.get("RDF_MAPPING_PATH")

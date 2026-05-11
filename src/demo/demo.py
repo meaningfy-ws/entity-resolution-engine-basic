@@ -74,11 +74,11 @@ def load_env_file(env_path: str = None) -> dict:
     config["REDIS_PASSWORD"] = os.environ.get(
         "REDIS_PASSWORD", config.get("REDIS_PASSWORD")
     )
-    config["REQUEST_QUEUE"] = os.environ.get(
-        "REQUEST_QUEUE", config.get("REQUEST_QUEUE", "ere_requests")
+    config["ERSYS_REQUEST_QUEUE"] = os.environ.get(
+        "ERSYS_REQUEST_QUEUE", config.get("ERSYS_REQUEST_QUEUE", "ere_requests")
     )
-    config["RESPONSE_QUEUE"] = os.environ.get(
-        "RESPONSE_QUEUE", config.get("RESPONSE_QUEUE", "ere_responses")
+    config["ERSYS_RESPONSE_QUEUE"] = os.environ.get(
+        "ERSYS_RESPONSE_QUEUE", config.get("ERSYS_RESPONSE_QUEUE", "ere_responses")
     )
 
     return config
@@ -338,8 +338,8 @@ def main(data_file: str | None = None):
         f"port={config['REDIS_PORT']}, db={config['REDIS_DB']}"
     )
     logger.info(
-        f"Queue names: request={config['REQUEST_QUEUE']}, "
-        f"response={config['RESPONSE_QUEUE']}"
+        f"Queue names: request={config['ERSYS_REQUEST_QUEUE']}, "
+        f"response={config['ERSYS_RESPONSE_QUEUE']}"
     )
 
     # Load demo mentions from JSON
@@ -368,7 +368,7 @@ def main(data_file: str | None = None):
 
     # Clear queues
     logger.info("Clearing request and response queues...")
-    redis_client.delete(config["REQUEST_QUEUE"], config["RESPONSE_QUEUE"])
+    redis_client.delete(config["ERSYS_REQUEST_QUEUE"], config["ERSYS_RESPONSE_QUEUE"])
 
     # ⚠️  Check if DuckDB database is non-empty (stale from prior runs)
     # This guards against corrupting demo results by mixing old and new mentions
@@ -406,7 +406,7 @@ def main(data_file: str | None = None):
             logger.log(TRACE, f"Full request message:\n{json.dumps(request, indent=2)}")
 
         message_bytes = message_json.encode("utf-8")
-        redis_client.rpush(config["REQUEST_QUEUE"], message_bytes)
+        redis_client.rpush(config["ERSYS_REQUEST_QUEUE"], message_bytes)
         request_ids.append(mention["request_id"])
 
         logger.info(
@@ -444,7 +444,7 @@ def main(data_file: str | None = None):
             break
 
         # Try to get a response with short timeout
-        result = redis_client.brpop(config["RESPONSE_QUEUE"], timeout=1)
+        result = redis_client.brpop(config["ERSYS_RESPONSE_QUEUE"], timeout=1)
 
         if result is not None:
             _, response_bytes = result

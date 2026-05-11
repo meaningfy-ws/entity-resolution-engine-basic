@@ -44,8 +44,8 @@ def test_app_main_processes_single_request(
     monkeypatch.setenv("REDIS_DB", os.environ.get("REDIS_DB", "0"))
     if redis_password := os.environ.get("REDIS_PASSWORD"):
         monkeypatch.setenv("REDIS_PASSWORD", redis_password)
-    monkeypatch.setenv("REQUEST_QUEUE", req_queue)
-    monkeypatch.setenv("RESPONSE_QUEUE", resp_queue)
+    monkeypatch.setenv("ERSYS_REQUEST_QUEUE", req_queue)
+    monkeypatch.setenv("ERSYS_RESPONSE_QUEUE", resp_queue)
     monkeypatch.setenv("RESOLVER_CONFIG_PATH", str(resolver_config_path))
     monkeypatch.setenv("RDF_MAPPING_PATH", str(rdf_mapping_path))
 
