@@ -229,8 +229,8 @@ def redis_client():
     configured_host = os.environ.get("REDIS_HOST", "localhost")
     hosts_to_try.append(configured_host)
 
-    # Fallback: if configured host is "redis" (Docker), also try localhost
-    if configured_host == "redis":
+    # Fallback: if configured host is a Docker service name, also try localhost
+    if configured_host in ("redis", "ersys-redis"):
         hosts_to_try.append("localhost")
 
     port = int(os.environ.get("REDIS_PORT", "6379"))
@@ -238,7 +238,7 @@ def redis_client():
     password = os.environ.get("REDIS_PASSWORD")
 
     client = None
-    host = None
+    last_error = None
     for host in hosts_to_try:
         try:
             client = redis.Redis(
@@ -249,8 +249,20 @@ def redis_client():
                 decode_responses=False,
             )
             client.ping()
+            last_error = None
+            break
         except redis.RedisError as e:
-            raise RuntimeError("Redis test service cannot be detected.") from e
+            last_error = e
+            client = None
+            continue
+
+    if last_error is not None:
+        raise RuntimeError("Redis test service cannot be detected.") from last_error
+
+    # Propagate the host that actually worked so that any test reading REDIS_HOST from
+    # os.environ (e.g. to wire main() or another subprocess) gets a resolvable address.
+    if host != configured_host:
+        os.environ["REDIS_HOST"] = host
 
     # Verify connection
     try:
