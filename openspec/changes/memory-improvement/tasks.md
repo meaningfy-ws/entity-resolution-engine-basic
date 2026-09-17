@@ -117,11 +117,11 @@
 - [x] 15.1 Fix `resolver_compound.yaml` / `resolver_multirule.yaml`: add `entity_fields`, replace the non-existent `city` field with `post_name`, prior 0.3 → 0.003; test that every shipped configuration builds a resolver and resolves a mention
 - [x] 15.2 Restore CRLF line endings on files that had them in HEAD (review-diff hygiene) — *28 files; diff 3399/2951 → 1727/1279 changed lines; formatter-only changes reverted in 4 files this change does not otherwise touch*
 - [x] 15.3 Redis integration and e2e tests after the refactors — *24 passed, 2 skipped; with the ERE service started against the test Redis the same file runs 6 passed, so the two long-skipped tests now execute*
-- [ ] 15.4 Profiles at 25k (single path and backlog) compared with the Part 2 run in one table (time box: 60 min)
+- [x] 15.4 Profiles at 25k (single path and backlog) compared with the Part 2 run in one table (time box: 60 min) — *`inputs/profile-post-refactor-25k.md`; refactors are performance-neutral: backlog within ±1.5 % at every checkpoint, single path 1–5 % faster (70.3 → 66.9 ms mean at 25k), RSS within 9 MB, catalog constant at 4*
 
 ## Roadmap
 
-- [x] 0.1 · [x] 0.2 · [x] 0.3 · [x] 1.0 · [x] 1.1 · [x] 1.2 · [x] 2.1 · [x] 2.2 · [x] 2.3 · [x] 2.4 · [x] 3.1 · [x] 3.2 · [x] 3.3 · [x] 4.1 · [x] 4.2 · [x] 4.3 · [x] 4.4 · [x] 5.1 · [x] 5.2 · [x] 5.3 · [x] 5.4 · [x] 5.5 · [x] 6.1 · [x] 6.2 · [x] 6.3 · [x] 6.4 · [ ] 7.1 · [x] 7.2 · [x] 7.3 · [x] 8.0 · [x] 8.1 · [x] 8.2 · [x] 8.3 · [x] 8.4 · [x] 8.5 · [x] 9.1 · [x] 9.2 · [x] 9.3 · [x] 9.4 · [x] 10.1 · [x] 10.2 · [x] 10.3 · [x] 11.1 · [x] 11.2 · [x] 11.3 · [x] 12.1 · [x] 12.2 · [x] 12.3 · [x] 12.4 · [x] 12.5 · [x] 12.6 · [x] 12.7 · [x] 12.8 · [x] 13.1 · [x] 13.2 · [x] 13.3 · [x] 13.4 · [x] 14.1 · [x] 14.2 · [x] 14.3 · [x] 14.4 · [x] 14.5 · [x] 14.6 · [x] 14.7 · [x] 14.8 · [x] 15.1 · [x] 15.2 · [x] 15.3 · [ ] 15.4
+- [x] 0.1 · [x] 0.2 · [x] 0.3 · [x] 1.0 · [x] 1.1 · [x] 1.2 · [x] 2.1 · [x] 2.2 · [x] 2.3 · [x] 2.4 · [x] 3.1 · [x] 3.2 · [x] 3.3 · [x] 4.1 · [x] 4.2 · [x] 4.3 · [x] 4.4 · [x] 5.1 · [x] 5.2 · [x] 5.3 · [x] 5.4 · [x] 5.5 · [x] 6.1 · [x] 6.2 · [x] 6.3 · [x] 6.4 · [ ] 7.1 · [x] 7.2 · [x] 7.3 · [x] 8.0 · [x] 8.1 · [x] 8.2 · [x] 8.3 · [x] 8.4 · [x] 8.5 · [x] 9.1 · [x] 9.2 · [x] 9.3 · [x] 9.4 · [x] 10.1 · [x] 10.2 · [x] 10.3 · [x] 11.1 · [x] 11.2 · [x] 11.3 · [x] 12.1 · [x] 12.2 · [x] 12.3 · [x] 12.4 · [x] 12.5 · [x] 12.6 · [x] 12.7 · [x] 12.8 · [x] 13.1 · [x] 13.2 · [x] 13.3 · [x] 13.4 · [x] 14.1 · [x] 14.2 · [x] 14.3 · [x] 14.4 · [x] 14.5 · [x] 14.6 · [x] 14.7 · [x] 14.8 · [x] 15.1 · [x] 15.2 · [x] 15.3 · [x] 15.4
 
 ## Verification
 
