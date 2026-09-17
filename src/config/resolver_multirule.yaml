@@ -1,18 +1,28 @@
-# Entity Resolver configuration — Multi-rule blocking (country OR city OR name)
+# Entity Resolver configuration — Multi-rule blocking (country OR town (post_name) OR name)
 # Three independent blocking rules evaluated as OR (union).
-# A pair is included if any rule fires: same country, OR same city, OR exact name match.
+# A pair is included if any rule fires: same country, OR same town (post_name), OR exact name match.
 # Trade-off: more comparisons (slower) but higher recall for diverse datasets.
+
+# Entity fields: must match fields in rdf_mapping.yaml entity_types.ORGANISATION.fields
+entity_fields:
+  - legal_name
+  - country_code
+  - post_name
 
 cache_strategy: tf_incremental
 
-threshold: 0.5
+threshold: 0.7
 
 top_n: 100
 
 match_weight_threshold: -10
 
+# Training threshold: EM runs once at N mentions, then the model is frozen and persisted.
+auto_train_threshold: 200
+
 splink:
-  probability_two_random_records_match: 0.3
+  # Prior: probability that two random records match (same value as resolver.yaml).
+  probability_two_random_records_match: 0.003
 
   comparisons:
     - type: jaro_winkler
@@ -20,9 +30,9 @@ splink:
       thresholds: [0.9, 0.8]
 
   # Multi-rule blocking: three independent rules, evaluated as UNION ALL.
-  # A pair is included if any rule fires (country_code match, OR city match, OR exact legal_name match).
+  # A pair is included if any rule fires (country_code match, OR town (post_name) match, OR exact legal_name match).
   # Splink deduplicates the results internally.
   blocking_rules:
     - country_code
-    - city
+    - post_name
     - legal_name

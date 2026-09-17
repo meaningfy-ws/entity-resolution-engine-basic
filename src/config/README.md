@@ -44,17 +44,30 @@ ERE is configured at runtime through environment variables. The service reads di
 
 **Redis** — Connection settings for the Redis message broker. The four connection variables (`REDIS_HOST`, `REDIS_PORT`, `REDIS_DB`, `REDIS_PASSWORD`) must point to the same Redis instance used by ERS. Set `REDIS_TLS=true` to require a TLS-encrypted connection (e.g. AWS ElastiCache with in-transit encryption).
 
-**Storage** — Paths to the DuckDB database and the YAML configuration files that drive entity resolution behaviour. When unset, `RESOLVER_CONFIG_PATH` and `RDF_MAPPING_PATH` fall back to the bundled files baked into the Docker image at `/app/config/`. `DUCKDB_PATH` is optional — when unset, the path defined inside `resolver.yaml` is used.
+**Bites** — The ERE takes waiting requests from Redis in bites and resolves each bite with one scoring call and one database commit. The bite size follows recent processing speed (`ERE_BATCH_TARGET_SECONDS`), so a backlog stays in Redis instead of being taken in at once.
+
+**Upgrade note** — Databases created before the name-similarity blocking change lack the `legal_name_norm` column; the ERE refuses to start on them. Delete the database file (and its `.splink_model.json`) and restart: the search space rebuilds from new requests.
+
+**Storage** — Paths to the DuckDB database and the YAML configuration files that drive entity resolution behaviour. When unset, `RESOLVER_CONFIG_PATH` and `RDF_MAPPING_PATH` fall back to the bundled files baked into the Docker image at `/app/config/`. `DUCKDB_PATH` is optional — when unset, the path defined inside `resolver.yaml` is used, else `data/app.duckdb`. DuckDB runs on disk by default; `ERE_DUCKDB_*` variables override `resolver.yaml` and set the memory limit, threads and spill directory. The trained similarity model is saved next to the database file and reloaded on start.
 
 ### Variable reference
 
 | Name | Group | Description | Default | Mandatory |
 | :--- | :--- | :--- | :--- | :---: |
 | `DUCKDB_PATH` | Storage | Path to the DuckDB database file. Leave unset to use the path defined in `resolver.yaml`. | *(from resolver.yaml)* | No |
+| `ERE_BATCH_LINGER_MS` | Bites | How long to wait for more requests when the queue drains in the middle of taking a bite. | `250` | No |
+| `ERE_BATCH_MAX_BYTES` | Bites | Most request payload bytes taken in one bite; a single larger request forms a bite of one. | `50000000` | No |
+| `ERE_BATCH_MAX_MENTIONS` | Bites | Most requests taken in one bite. | `500` | No |
+| `ERE_BATCH_TARGET_SECONDS` | Bites | Target processing time of one bite; the bite size adapts to recent processing speed so each bite takes about this long. | `2` | No |
+| `ERE_DUCKDB_MEMORY_LIMIT` | Storage | DuckDB memory limit (e.g. `2GB`). Set it in containers to ~60% of the container memory limit; DuckDB otherwise sizes it from host RAM. | *(DuckDB default: 80% of host RAM)* | No |
+| `ERE_DUCKDB_STORAGE` | Storage | `disk` or `memory`. Overrides `duckdb.type` in `resolver.yaml`. | `disk` | No |
+| `ERE_DUCKDB_TEMP_DIR` | Storage | Writable directory DuckDB spills to when over its memory limit. Required for `memory` storage on a read-only filesystem. | `<DUCKDB_PATH>.tmp` (disk) | No |
+| `ERE_DUCKDB_THREADS` | Storage | Number of DuckDB worker threads. | *(DuckDB default: CPU count)* | No |
 | `ERE_LOG_LEVEL` | Logging | Python logging level for the ERE service. Accepts `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`, and the custom `TRACE` level. | `INFO` | No |
 | `ERSYS_REQUEST_QUEUE` | Queues | Redis list key ERE reads inbound resolution requests from. Must match the ERS-side queue name. | `ere_requests` | No |
 | `ERSYS_RESPONSE_QUEUE` | Queues | Redis list key ERE writes resolution responses to. Must match the ERS-side queue name. | `ere_responses` | No |
 | `RDF_MAPPING_PATH` | Storage | Path to the RDF field mapping config YAML. Defines namespace bindings and field extraction rules for each entity type. When unset, falls back to the bundled file at `/app/config/rdf_mapping.yaml` inside the Docker image. | *(bundled `/app/config/rdf_mapping.yaml`)* | No |
+| `ERE_SPLINK_MODEL_PATH` | Storage | File the trained similarity model is saved to and reloaded from. | `<DUCKDB_PATH>.splink_model.json` (disk); not persisted in memory mode | No |
 | `REDIS_DB` | Redis | Redis database index. | `0` | No |
 | `REDIS_HOST` | Redis | Redis server hostname or endpoint. | `localhost` | No |
 | `REDIS_PASSWORD` | Redis | Redis authentication password. Leave empty if Redis AUTH is not configured. | | No |
@@ -72,10 +85,10 @@ ERE is configured at runtime through environment variables. The service reads di
 | **duckdb.type** | string | `persistent` | Database mode: `persistent` (file-based) or `in-memory` (test/ephemeral) |
 | **duckdb.path** | string | `data/app.duckdb` | Database file location (only for persistent mode; overridden by DUCKDB_PATH env var) |
 | **cache_strategy** | string | `tf_incremental` | Search space caching: `tf_incremental` (term-frequency incremental) |
-| **threshold** | float (0.0–1.0) | `0.20` | Minimum match probability for cluster assignment. Lower = more sensitive (higher recall, lower precision); higher = more selective |
+| **threshold** | float (0.0–1.0) | `0.7` | Minimum match probability for cluster assignment. 0.7 measured on `test/stress/data/org-mid.csv`: 0.2 merged mostly unrelated organisations |
 | **top_n** | int | `100` | Maximum cluster candidates returned per mention (pruning limit) |
 | **match_weight_threshold** | float | `-10` | Pre-filter on Splink match weight; `-10` captures below-threshold links needed for full candidate output |
-| **auto_train_threshold** | int | `50` | Mention count at which to trigger background EM training (0 = disabled) |
+| **auto_train_threshold** | int | `200` | Mention count at which EM training runs once on that many mentions; the model is then frozen, saved and reloaded on restart (0 = disabled) |
 | **probability_two_random_records_match** | float (0.0–1.0) | `0.003` | Fellegi-Sunter prior λ: baseline probability any two records match (affects all m/u probability ratios) |
 
 ---
@@ -87,7 +100,6 @@ The `splink.comparisons` section defines similarity functions and their threshol
 | Field | Type | Thresholds | Purpose |
 |-------|------|-----------|---------|
 | **legal_name** | jaro_winkler | [0.9, 0.8] | Primary identifier; primary signal for match determination |
-| **country_code** | exact_match | — | Blocking rule only (not used in comparison); preserves EM flexibility |
 | **nuts_code** | exact_match | — | EU regional code; exact match or missing data |
 | **post_code** | jaro_winkler | [0.95, 0.85] | Postal/ZIP code; typo-tolerant with high thresholds |
 | **post_name** | jaro_winkler | [0.90, 0.80] | City name; captures spelling variants and abbreviations |
@@ -107,16 +119,26 @@ Pairs are compared only if **at least one** blocking rule matches. This reduces 
 **Current configuration:**
 ```yaml
 blocking_rules:
-  - country_code                    # Primary: same country (strict)
-  - [country_code, nuts_code]       # Secondary: same country AND same EU region
+  - same: country_code
+    similar:
+      field: legal_name
+      min_jaro_winkler: 0.8
 ```
 
 **Semantics:**
-- Rule 1: Pair must have matching country codes
-- Rule 2: Pair must have matching country codes **AND** matching NUTS codes (if both present)
-- At least one rule must fire for comparison to occur
+- A pair is scored only if both mentions have the same `country_code` **and** their normalised legal names
+  (lower-case, accents stripped, letters and digits only; stored in `mentions.legal_name_norm`) have
+  Jaro-Winkler similarity ≥ 0.8.
+- A rule may also be a field name or a list of field names (all equal).
+- Rules are validated at start-up: unknown or missing keys, field names that are not entity fields, similarity on a
+  field without a normalised copy, and thresholds outside 0–1 refuse start-up.
+- `splink.normalised_fields` (default `[legal_name]`) lists the fields stored with a normalised copy;
+  `splink.em_blocking_field` (default `country_code`) is the field EM training blocks on.
+- `country_code` is not a comparison: blocking guarantees it agrees, so comparing it would only inflate scores.
+- EM training blocks on `splink.em_blocking_field`, independent of these rules.
 
-**Effect:** Drastically reduces comparison volume while preserving global comparisons within country.
+**Effect (measured on `test/stress/data/org-mid.csv`):** 2.4 pairs scored per mention instead of 267 with
+country-only blocking; all identical-name pairs still scored; < 0.1 % of merged pairs have unrelated names.
 
 ---
 
@@ -167,7 +189,7 @@ blocking_rules:
 
 ### EM Training
 
-Once `auto_train_threshold` is reached, background EM estimation updates m/u parameters based on your data. This is more accurate than cold-start but requires representative data (ideally ~500+ mentions).
+When the stored mentions reach `auto_train_threshold`, EM estimation runs once in the background on that many mentions and replaces the cold-start m/u parameters. The trained model is then frozen: it is saved next to the database (`ERE_SPLINK_MODEL_PATH`), reloaded on restart, and never retrained. Stored similarity scores are not recomputed. If the service starts with at least `auto_train_threshold` mentions and no model file, it trains once before consuming requests. Delete the model file to force a new training on the next start.
 
 To disable: Set `auto_train_threshold: 0`
 

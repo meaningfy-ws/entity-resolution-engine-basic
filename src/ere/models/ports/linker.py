@@ -8,7 +8,13 @@ and swapping the matching algorithm without changing resolver logic.
 
 from abc import ABC, abstractmethod
 
-from ere.models.resolver import Mention, MentionLink
+from ere.models.resolver import (
+    LinkTable,
+    Mention,
+    MentionLink,
+    ModelStatus,
+    TrainingOutcome,
+)
 
 
 class SimilarityLinker(ABC):
@@ -39,6 +45,22 @@ class SimilarityLinker(ABC):
         """
 
     @abstractmethod
+    def find_matches_batch(self, mentions: list[Mention]) -> LinkTable:
+        """
+        Score several new mentions in one call.
+
+        The mentions are already part of the search space, so links between mentions of the
+        batch are included (in both directions); self-links are excluded. Callers decide which
+        links to keep (e.g. only links to mentions that arrived earlier).
+
+        Args:
+            mentions: The new mentions, in arrival order.
+
+        Returns:
+            LinkTable with left = new mention, right = other mention.
+        """
+
+    @abstractmethod
     def register_mention(self, mention: Mention) -> None:
         """
         Add a mention to the search space for future find_matches() calls.
@@ -51,10 +73,18 @@ class SimilarityLinker(ABC):
         """
 
     @abstractmethod
-    def train(self) -> None:
-        """
-        Estimate model parameters via EM or other training algorithm.
+    def needs_training(self) -> bool:
+        """True while the linker scores with untrained (cold-start) parameters and training is allowed."""
 
-        Safe to call multiple times (retraining is idempotent).
-        Implementations handle insufficient data gracefully (e.g., via cold-start defaults).
+    @abstractmethod
+    def model_status(self) -> ModelStatus:
+        """Where scoring parameters come from, and why a persisted model could not be used (if so)."""
+
+    @abstractmethod
+    def train(self) -> TrainingOutcome:
+        """
+        Estimate model parameters once; later calls are skipped (the model is frozen).
+
+        Returns the outcome instead of logging it; implementations handle insufficient data by
+        keeping cold-start parameters and reporting a failed outcome.
         """

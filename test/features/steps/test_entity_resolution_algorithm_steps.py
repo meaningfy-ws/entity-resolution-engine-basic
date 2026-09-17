@@ -5,17 +5,17 @@ Tests the core entity resolution algorithm with simple mentions and configurable
 
 import pytest
 from assertpy import assert_that
-from pytest_bdd import given, when, then, parsers, scenarios
-
-from ere.models.resolver import Mention, MentionId, ClusterId
-from ere.services.entity_resolution_service import EntityResolver
-from ere.services.resolver_config import DuckDBConfig, ResolverConfig
+from pytest_bdd import given, parsers, scenarios, then, when
 from test.unit.adapters.stubs import (
+    FixedSimilarityLinker,
+    InMemoryClusterRepository,
     InMemoryMentionRepository,
     InMemorySimilarityRepository,
-    InMemoryClusterRepository,
-    FixedSimilarityLinker,
 )
+
+from ere.models.resolver import Mention, MentionId
+from ere.services.entity_resolution_service import EntityResolver
+from ere.services.resolver_config import DuckDBConfig, ResolverConfig
 
 scenarios("../entity_resolution_algorithm.feature")
 

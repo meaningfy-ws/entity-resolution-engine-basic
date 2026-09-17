@@ -1,52 +1,73 @@
 """DuckDB-backed repository implementations for service layer."""
 
+from collections.abc import Iterable, Sequence
+
 import duckdb
 import pandas as pd
 
-from ere.models.resolver import (
-    ClusterId,
-    ClusterMembership,
-    Mention,
-    MentionId,
-    MentionLink,
-)
-from ere.adapters.repositories import (
+from ere.adapters.duckdb_schema import NORMALISED_SUFFIX, normalised_name_sql
+from ere.models.ports.repositories import (
     ClusterRepository,
     MentionRepository,
     SimilarityRepository,
 )
+from ere.models.resolver import (
+    ClusterId,
+    ClusterMembership,
+    LinkTable,
+    Mention,
+    MentionId,
+    MentionLink,
+)
+from ere.models.resolver.blocking import DEFAULT_NORMALISED_FIELDS
+
+_LINKS_BATCH_VIEW = "ere_links_batch"
 
 
 class DuckDBMentionRepository(MentionRepository):
     """DuckDB-backed mention repository."""
 
-    def __init__(self, con: duckdb.DuckDBPyConnection, entity_fields: list[str]):
+    def __init__(
+        self,
+        con: duckdb.DuckDBPyConnection,
+        entity_fields: list[str],
+        normalised_fields: Sequence[str] = DEFAULT_NORMALISED_FIELDS,
+    ):
         """
         Initialize with a DuckDB connection and entity field names.
 
         Args:
             con: DuckDB connection (must have mentions table already created).
             entity_fields: List of field names (e.g. ["legal_name", "country_code"]).
+            normalised_fields: Entity fields stored with a normalised copy.
         """
         self._con = con
         self._entity_fields = entity_fields
+        self._normalised_fields = [
+            field for field in normalised_fields if field in entity_fields
+        ]
 
     def save(self, mention: Mention) -> None:
         """
         Persist a mention to storage.
 
-        Uses parameterized INSERT with dynamic columns based on entity_fields.
+        Uses parameterized INSERT with dynamic columns based on entity_fields; normalised copies of
+        name fields are computed by DuckDB in the same statement.
         """
         flat_dict = mention.to_flat_dict()
-        # Extract mention_id and entity field values in order
         values = [flat_dict["mention_id"]] + [
             flat_dict.get(f) for f in self._entity_fields
         ]
-        placeholders = ",".join(["?"] * (1 + len(self._entity_fields)))
-        col_names = ",".join(["mention_id"] + self._entity_fields)
+        placeholders = ["?"] * (1 + len(self._entity_fields))
+        col_names = ["mention_id"] + self._entity_fields
+        for field in self._normalised_fields:
+            col_names.append(f"{field}{NORMALISED_SUFFIX}")
+            placeholders.append(normalised_name_sql("?"))
+            values.append(flat_dict.get(field))
 
         self._con.execute(
-            f"INSERT INTO mentions ({col_names}) VALUES ({placeholders})", values
+            f"INSERT INTO mentions ({','.join(col_names)}) VALUES ({','.join(placeholders)})",
+            values,
         )
 
     def load_all(self) -> list[Mention]:
@@ -127,8 +148,32 @@ class DuckDBSimilarityRepository(SimilarityRepository):
         df = pd.DataFrame(rows)
 
         # Register DataFrame as temporary table and insert (optimized by DuckDB for vectorized operations)
-        self._con.register("df_temp", df)
-        self._con.execute("INSERT INTO similarities SELECT * FROM df_temp")
+        self._con.register(_LINKS_BATCH_VIEW, df)
+        try:
+            self._con.execute(
+                f"INSERT INTO similarities SELECT * FROM {_LINKS_BATCH_VIEW}"
+            )
+        finally:
+            self._con.unregister(_LINKS_BATCH_VIEW)
+
+    def save_table(self, table: LinkTable) -> None:
+        """Persist a columnar link table through one registered view and one INSERT."""
+        if len(table) == 0:
+            return
+        batch = pd.DataFrame(
+            {
+                "mention_id_l": pd.array(table.left_ids, dtype="string"),
+                "mention_id_r": pd.array(table.right_ids, dtype="string"),
+                "match_probability": pd.array(table.scores, dtype="float64"),
+            }
+        )
+        self._con.register(_LINKS_BATCH_VIEW, batch)
+        try:
+            self._con.execute(
+                f"INSERT INTO similarities SELECT * FROM {_LINKS_BATCH_VIEW}"
+            )
+        finally:
+            self._con.unregister(_LINKS_BATCH_VIEW)
 
     def count(self) -> int:
         """Return the total number of mention-links in storage."""
@@ -198,6 +243,19 @@ class DuckDBClusterRepository(ClusterRepository):
             raise KeyError(f"No cluster assignment for mention {mention_id}")
 
         return ClusterId(value=row[0])
+
+    def clusters_for(
+        self, mention_ids: Iterable[MentionId]
+    ) -> dict[MentionId, ClusterId]:
+        """Look up the clusters of several mentions in one indexed query; unknown mentions are omitted."""
+        ids = [mention_id.value for mention_id in mention_ids]
+        if not ids:
+            return {}
+        rows = self._con.execute(
+            "SELECT mention_id, cluster_id FROM clusters WHERE mention_id IN (SELECT UNNEST(?))",
+            [ids],
+        ).fetchall()
+        return {MentionId(value=m): ClusterId(value=c) for m, c in rows}
 
     def count(self) -> int:
         """Return the total number of distinct clusters in storage."""

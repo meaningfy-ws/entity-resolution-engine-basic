@@ -18,6 +18,15 @@ Environment variables:
     RDF_MAPPING_PATH      Path to rdf_mapping.yaml config file
     RESOLVER_CONFIG_PATH  Path to resolver.yaml config file
     DUCKDB_PATH           Path to persistent DuckDB file (overrides resolver.yaml)
+    ERE_DUCKDB_STORAGE    DuckDB storage: disk (default) or memory (overrides resolver.yaml duckdb.type)
+    ERE_DUCKDB_MEMORY_LIMIT  DuckDB memory limit, e.g. 2GB (default: DuckDB's own, sized from host RAM)
+    ERE_DUCKDB_THREADS    DuckDB worker threads (default: DuckDB's own)
+    ERE_DUCKDB_TEMP_DIR   DuckDB spill directory (default: <DUCKDB_PATH>.tmp on disk)
+    ERE_SPLINK_MODEL_PATH Trained model file (default: <DUCKDB_PATH>.splink_model.json on disk)
+    ERE_BATCH_TARGET_SECONDS  Target processing time of one bite of requests (default: 2)
+    ERE_BATCH_MAX_MENTIONS    Most requests taken in one bite (default: 500)
+    ERE_BATCH_MAX_BYTES       Most payload bytes taken in one bite (default: 50000000)
+    ERE_BATCH_LINGER_MS       Wait for more requests when the queue drains mid-bite (default: 250)
 
 CLI arguments:
     --log-level           Python log level name (overrides LOG_LEVEL env var)
@@ -31,13 +40,14 @@ import os
 import signal
 import sys
 
-from ere.adapters.factories import build_rdf_mapper
 from ere.adapters.redis_client import RedisConnectionConfig
-from ere.entrypoints.queue_worker import RedisQueueWorker
-from ere.services.factories import (
-    build_entity_resolver,
+from ere.entrypoints.bootstrap import (
     build_entity_resolution_service,
+    build_entity_resolver,
+    build_rdf_mapper,
+    resolve_batch_settings,
 )
+from ere.entrypoints.queue_worker import RedisQueueWorker
 from ere.utils.logging import configure_logging
 
 log = logging.getLogger(__name__)
@@ -120,12 +130,20 @@ def main() -> None:
         log.exception("Failed to build entity resolution service")
         sys.exit(1)
 
+    try:
+        batch_settings = resolve_batch_settings(os.environ)
+    except ValueError:
+        log.exception("Invalid batch settings")
+        sys.exit(1)
+    log.info("Batch settings: %s", batch_settings)
+
     # Create queue worker
     worker = RedisQueueWorker(
         redis_client=client,
         entity_resolution_service=service,
         request_queue=request_queue,
         response_queue=response_queue,
+        batch_settings=batch_settings,
     )
 
     # Set up signal handling for graceful shutdown
@@ -143,7 +161,7 @@ def main() -> None:
     log.info("ERE service ready, listening for requests")
     try:
         while running:
-            worker.process_single_message()
+            worker.process_bite()
     except KeyboardInterrupt:
         log.info("Service interrupted")
     except Exception as e:  # pylint: disable=broad-exception-caught

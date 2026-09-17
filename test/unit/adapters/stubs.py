@@ -4,30 +4,19 @@ from typing import Protocol, runtime_checkable
 
 from erspec.models.core import EntityMention
 
-from ere.adapters.rdf_mapper_port import RDFMapper
+from ere.models.ports.rdf_mapper import RDFMapper
 from ere.models.resolver import (
     ClusterId,
     ClusterMembership,
+    LinkTable,
     Mention,
     MentionId,
     MentionLink,
+    ModelSource,
+    ModelStatus,
+    TrainingOutcome,
+    TrainingStatus,
 )
-
-
-# Import repos and linker from their actual modules to avoid circular imports
-def _get_repository_types():
-    """Lazy import to avoid circular dependency with services.__init__."""
-    from ere.adapters import repositories
-
-    return repositories
-
-
-def _get_linker_type():
-    """Lazy import to avoid circular dependency."""
-    from ere.services import linker
-
-    return linker
-
 
 # Define base classes as protocols to avoid circular import
 
@@ -66,7 +55,8 @@ class SimilarityLinker(Protocol):
 
     def find_matches(self, mention: Mention) -> list[MentionLink]: ...
     def register_mention(self, mention: Mention) -> None: ...
-    def train(self) -> None: ...
+    def model_status(self) -> ModelStatus: ...
+    def train(self) -> TrainingOutcome: ...
 
 
 class InMemoryMentionRepository(MentionRepository):
@@ -97,6 +87,16 @@ class InMemorySimilarityRepository(SimilarityRepository):
     def save_all(self, links: list[MentionLink]) -> None:
         self._links.extend(links)
 
+    def save_table(self, table: LinkTable) -> None:
+        self._links.extend(
+            MentionLink(
+                left_id=MentionId(value=left),
+                right_id=MentionId(value=right),
+                score=score,
+            )
+            for left, right, score in zip(table.left_ids, table.right_ids, table.scores)
+        )
+
     def count(self) -> int:
         return len(self._links)
 
@@ -120,6 +120,9 @@ class InMemoryClusterRepository(ClusterRepository):
         if mention_id not in self._memberships:
             raise KeyError(f"No cluster assignment for mention {mention_id}")
         return self._memberships[mention_id]
+
+    def clusters_for(self, mention_ids) -> dict[MentionId, ClusterId]:
+        return {m: self._memberships[m] for m in mention_ids if m in self._memberships}
 
     def count(self) -> int:
         # Count distinct clusters, not membership entries
@@ -192,13 +195,30 @@ class FixedSimilarityLinker(SimilarityLinker):
 
         return links
 
+    def find_matches_batch(self, mentions: list[Mention]) -> LinkTable:
+        """Score each mention of the batch against the registered search space (which includes the batch)."""
+        links = [link for mention in mentions for link in self.find_matches(mention)]
+        return LinkTable(
+            left_ids=tuple(link.left_id.value for link in links),
+            right_ids=tuple(link.right_id.value for link in links),
+            scores=tuple(link.score for link in links),
+        )
+
     def register_mention(self, mention: Mention) -> None:
         """Add a mention to the search space."""
         self._registered_mentions[mention.id] = mention
 
-    def train(self) -> None:
-        """No-op for fixed linker (scores are pre-configured)."""
-        pass
+    def needs_training(self) -> bool:
+        """Fixed scores never need training."""
+        return False
+
+    def model_status(self) -> ModelStatus:
+        """Fixed scores behave like an untrained model."""
+        return ModelStatus(source=ModelSource.COLD_START)
+
+    def train(self) -> TrainingOutcome:
+        """Fixed scores are never trained."""
+        return TrainingOutcome(status=TrainingStatus.SKIPPED)
 
 
 class StubRDFMapper(RDFMapper):

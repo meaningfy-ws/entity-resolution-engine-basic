@@ -2,10 +2,12 @@
 
 from pathlib import Path
 
-from ere.adapters.factories import build_rdf_mapper
-from ere.adapters.rdf_mapper_port import RDFMapper
+from ere.entrypoints.bootstrap import build_rdf_mapper
+from ere.models.ports.rdf_mapper import RDFMapper
 
-TEST_RDF_MAPPING = Path(__file__).parent.parent.parent / "resources" / "rdf_mapping.yaml"
+TEST_RDF_MAPPING = (
+    Path(__file__).parent.parent.parent / "resources" / "rdf_mapping.yaml"
+)
 
 
 def test_build_rdf_mapper_with_explicit_path_returns_mapper():

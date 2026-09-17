@@ -41,8 +41,11 @@ services:
     container_name: "ere"
     env_file: .env
     restart: unless-stopped
+    # Fail loudly instead of eating the host; keep ERE_DUCKDB_MEMORY_LIMIT at ~60% of this.
+    mem_limit: 4g
     environment:
       - DUCKDB_PATH=${DUCKDB_PATH:-/data/app.duckdb}
+      - ERE_DUCKDB_MEMORY_LIMIT=${ERE_DUCKDB_MEMORY_LIMIT:-2GB}
       - RDF_MAPPING_PATH=/app/config/rdf_mapping.yaml
       - RESOLVER_CONFIG_PATH=/app/config/resolver.yaml
       # Remaining REDIS_* and queue vars inherited from env_file

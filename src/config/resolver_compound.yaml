@@ -1,25 +1,35 @@
-# Entity Resolver configuration — Compound blocking (country_code AND city)
-# Blocks pairs unless both country_code AND city match.
-# Creates tight, city-level blocks within countries.
-# Trade-off: fewer comparisons (faster) but may miss cross-city variants.
+# Entity Resolver configuration — Compound blocking (country_code AND town (post_name))
+# Blocks pairs unless both country_code AND town (post_name) match.
+# Creates tight, town (post_name)-level blocks within countries.
+# Trade-off: fewer comparisons (faster) but may miss cross-town (post_name) variants.
+
+# Entity fields: must match fields in rdf_mapping.yaml entity_types.ORGANISATION.fields
+entity_fields:
+  - legal_name
+  - country_code
+  - post_name
 
 cache_strategy: tf_incremental
 
-threshold: 0.5
+threshold: 0.7
 
 top_n: 100
 
 match_weight_threshold: -10
 
+# Training threshold: EM runs once at N mentions, then the model is frozen and persisted.
+auto_train_threshold: 200
+
 splink:
-  probability_two_random_records_match: 0.3
+  # Prior: probability that two random records match (same value as resolver.yaml).
+  probability_two_random_records_match: 0.003
 
   comparisons:
     - type: jaro_winkler
       field: legal_name
       thresholds: [0.9, 0.8]
 
-  # Compound blocking rule: a pair is compared only if both country_code AND city match.
+  # Compound blocking rule: a pair is compared only if both country_code AND town (post_name) match.
   # This is expressed as a list with two fields.
   blocking_rules:
-    - [country_code, city]
+    - [country_code, post_name]

@@ -4,8 +4,8 @@ Pytest configuration file, which the framework picks up at startup.
 [Details here](https://docs.pytest.org/en/stable/reference/fixtures.html)
 """
 
-import os
 import logging.config
+import os
 from pathlib import Path
 
 import pytest
@@ -26,12 +26,25 @@ def pytest_configure(config: pytest.Config):
     """
 
     config.addinivalue_line("markers", "integration: Integration test marker.")
+    config.addinivalue_line(
+        "markers",
+        "pending: written ahead of implementation (TDD); runs as strict xfail until the tag is removed.",
+    )
 
     # Setup logging from YAML config file
     cfg_path = str(TEST_RESOURCES_DIR / "logging-test.yml")
     with open(cfg_path, encoding="utf-8") as f:
         logging_cfg = yaml.safe_load(f)
     logging.config.dictConfig(logging_cfg)
+
+
+def pytest_collection_modifyitems(items):
+    """Run tests marked `pending` as strict xfail: red until implemented, and a pass forces tag removal."""
+    for test_item in items:
+        if test_item.get_closest_marker("pending"):
+            test_item.add_marker(
+                pytest.mark.xfail(strict=True, reason="pending implementation (TDD)")
+            )
 
 
 # ============================================================================
@@ -159,10 +172,11 @@ def entity_resolution_service(resolver_config_path, rdf_mapping_path):  # pylint
     Uses test-specific config files to ensure reproducibility and independence.
     """
     import duckdb
+
     from ere.adapters.duckdb_repositories import (
+        DuckDBClusterRepository,
         DuckDBMentionRepository,
         DuckDBSimilarityRepository,
-        DuckDBClusterRepository,
     )
     from ere.adapters.duckdb_schema import init_schema
     from ere.adapters.splink_linker_impl import SpLinkSimilarityLinker

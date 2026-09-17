@@ -8,10 +8,12 @@ swapping infrastructure without changing resolver logic.
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 
 from ere.models.resolver import (
     ClusterId,
     ClusterMembership,
+    LinkTable,
     Mention,
     MentionId,
     MentionLink,
@@ -88,6 +90,15 @@ class SimilarityRepository(ABC):
         """
 
     @abstractmethod
+    def save_table(self, table: LinkTable) -> None:
+        """
+        Persist every row of a columnar link table in one operation.
+
+        Args:
+            table: LinkTable of scored pairs.
+        """
+
+    @abstractmethod
     def count(self) -> int:
         """
         Return the total number of mention-links in storage.
@@ -147,6 +158,20 @@ class ClusterRepository(ABC):
 
         Raises:
             KeyError: If the mention has no cluster assignment.
+        """
+
+    @abstractmethod
+    def clusters_for(
+        self, mention_ids: Iterable[MentionId]
+    ) -> dict[MentionId, ClusterId]:
+        """
+        Look up the clusters of several mentions in one call.
+
+        Args:
+            mention_ids: The MentionIds to look up.
+
+        Returns:
+            Mapping of each known MentionId to its ClusterId; unknown mentions are omitted.
         """
 
     @abstractmethod

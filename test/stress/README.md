@@ -356,3 +356,13 @@ python3 test/stress/stress_test.py \
 - Check `peak_memory_mb` in JSON output
 - If > 1GB with 5k records, investigate for leaks
 - Consider smaller seed or fewer records
+
+## Growth profile (memory-improvement)
+
+`profile_resolution.py` resolves mentions through the production factory (on-disk DuckDB) and prints, per
+window, stored mentions, live RSS, DuckDB catalog size, and mean / p95 ms per mention. Flat catalog and flat
+latency as `n` grows are the acceptance signal (budget: ≤360 ms mean per mention).
+
+```bash
+cd src && poetry run python ../test/stress/profile_resolution.py --mentions 25000 --window 2500 --output /tmp/profile.json
+```

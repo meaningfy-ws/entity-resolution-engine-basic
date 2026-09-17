@@ -5,11 +5,20 @@ from pathlib import Path
 import pytest
 import yaml
 
-from ere.services.entity_resolution_service import EntityResolutionService, EntityResolver
-from ere.services.factories import build_entity_resolution_service, build_entity_resolver
+from ere.entrypoints.bootstrap import (
+    DuckDBEnvVar,
+    build_entity_resolution_service,
+    build_entity_resolver,
+)
+from ere.services.entity_resolution_service import (
+    EntityResolutionService,
+    EntityResolver,
+)
 from test.unit.adapters.stubs import StubRDFMapper
 
-TEST_RESOLVER_CONFIG = Path(__file__).parent.parent.parent / "resources" / "resolver.yaml"
+TEST_RESOLVER_CONFIG = (
+    Path(__file__).parent.parent.parent / "resources" / "resolver.yaml"
+)
 
 
 def test_build_entity_resolver_returns_entity_resolver():
@@ -17,7 +26,10 @@ def test_build_entity_resolver_returns_entity_resolver():
     assert isinstance(resolver, EntityResolver)
 
 
-def test_build_entity_resolver_uses_default_config_when_no_path_given():
+def test_build_entity_resolver_uses_default_config_when_no_path_given(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv(DuckDBEnvVar.PATH, str(tmp_path / "default.duckdb"))
     resolver = build_entity_resolver()
     assert isinstance(resolver, EntityResolver)
 
