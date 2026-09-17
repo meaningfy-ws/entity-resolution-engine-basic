@@ -1,0 +1,25 @@
+schema: meaningfy
+
+# Project context — injected (wrapped in <context>) into every artifact's instructions.
+# The durable truth is openspec/specs/; this string is the orientation index.
+# Schema under openspec/schemas/meaningfy/ is PINNED @ OpenSpec 1.4.1 (copied from meaningfy skillery).
+context: |
+  Repo: Entity Resolution Engine (entity-resolution-engine-basic).
+  Architecture: cosmic-python layering (models, adapters, services, entrypoints);
+  innermost layer is `models` (erspec LinkML-generated + ERE extensions, no I/O).
+  Enforced by .importlinter (`make check-architecture`).
+  Package: ere under src/ (legacy layout). Default branch: develop.
+  Contract with ERS: docs/ERS-ERE-System-Technical-Contract.pdf. Tests: test/ (unit, BDD features + steps).
+  Commits: Conventional Commits `type(scope): description` (imperative, no trailing punctuation, no co-authors/tool names).
+  Artifact vocabulary: EPIC ≡ proposal.md (Shape-Up work shape);
+  PLAN ≡ design.md + tasks.md (clarity gate scores the pair ≥9/10);
+  normative requirements ≡ specs/ deltas (RFC-2119 SHALL + Given/When/Then, no EARS).
+
+# Per-artifact rules — THIN by design. Additive to the schema's built-in instructions.
+rules:
+  proposal:
+    - The EPIC MUST state an Appetite and a No-gos section (an EPIC without no-gos is unshaped).
+  specs:
+    - Use RFC-2119 SHALL/MUST; every requirement MUST have at least one #### Scenario (WHEN/THEN). No EARS.
+  tasks:
+    - The PLAN MUST cite its parent EPIC id on the first line (golden thread — cite your parent).
