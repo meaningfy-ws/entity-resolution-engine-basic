@@ -3,9 +3,18 @@ root_packages =
     ere
 
 [importlinter:contract:layers]
-name = ERE three-layer architecture
+name = ERE layered architecture
 type = layers
 layers =
     ere.entrypoints
     ere.services
+    ere.adapters
+    ere.models
+
+[importlinter:contract:services-use-ports]
+name = Services depend on ports in ere.models, never on concrete adapters (composition root is ere.entrypoints)
+type = forbidden
+source_modules =
+    ere.services
+forbidden_modules =
     ere.adapters

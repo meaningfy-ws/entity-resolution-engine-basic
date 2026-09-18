@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from pydantic import BaseModel, ConfigDict, model_validator
 
 from .ids import MentionId
@@ -45,3 +47,30 @@ class MentionLink(BaseModel):
     def meets_threshold(self, threshold: float) -> bool:
         """Check if this link's score meets or exceeds the threshold."""
         return self.score >= threshold
+
+
+@dataclass(frozen=True)
+class LinkTable:
+    """
+    Scored links of a bite in columnar form: parallel tuples, one row per scored pair.
+
+    Keeps links as plain values between scoring and storage; `MentionLink` objects are built only
+    for the rows a caller actually needs (`links_for`).
+    """
+
+    left_ids: tuple[str, ...]
+    right_ids: tuple[str, ...]
+    scores: tuple[float, ...]
+
+    def __len__(self) -> int:
+        return len(self.scores)
+
+    def links_for(self, mention_id: MentionId) -> list[MentionLink]:
+        """Links whose left side is the given mention, in table order."""
+        return [
+            MentionLink(
+                left_id=mention_id, right_id=MentionId(value=right), score=score
+            )
+            for left, right, score in zip(self.left_ids, self.right_ids, self.scores)
+            if left == mention_id.value
+        ]

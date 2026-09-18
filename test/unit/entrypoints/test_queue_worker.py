@@ -7,9 +7,9 @@ from unittest.mock import MagicMock
 import pytest
 from erspec.models.core import EntityMention, EntityMentionIdentifier
 from erspec.models.ere import (
-    EREErrorResponse,
     EntityMentionResolutionRequest,
     EntityMentionResolutionResponse,
+    EREErrorResponse,
 )
 from linkml_runtime.dumpers import JSONDumper
 
@@ -76,17 +76,20 @@ def test_process_single_message_returns_false_on_timeout(worker, mock_redis):
     assert result is False
 
 
-def test_process_single_message_returns_true_on_success(worker, mock_redis, mock_service):
+def test_process_single_message_returns_true_on_success(
+    worker, mock_redis, mock_service
+):
     request = _make_request("qw-happy")
     raw_msg = _dumper.dumps(request).encode("utf-8")
     mock_redis.brpop.return_value = ("ere_requests", raw_msg)
-    mock_service.process_request.return_value = _make_response("qw-happy")
+    mock_service.process_batch.return_value = [_make_response("qw-happy")]
 
     result = worker.process_single_message()
 
     assert result is True
-    mock_service.process_request.assert_called_once()
-    mock_redis.lpush.assert_called_once()
+    mock_service.process_batch.assert_called_once()
+    mock_redis.pipeline.return_value.lpush.assert_called_once()
+    mock_redis.pipeline.return_value.execute.assert_called_once()
 
 
 def test_process_single_message_sends_error_response_on_parse_failure(
@@ -97,14 +100,15 @@ def test_process_single_message_sends_error_response_on_parse_failure(
     result = worker.process_single_message()
 
     assert result is True
-    mock_redis.lpush.assert_called_once()
-    pushed_payload = mock_redis.lpush.call_args[0][1]
+    pipeline = mock_redis.pipeline.return_value
+    pipeline.lpush.assert_called_once()
+    pushed_payload = pipeline.lpush.call_args[0][1]
     pushed_json = json.loads(pushed_payload)
     assert pushed_json.get("error_type") == "ProcessingError"
 
 
-def test_send_response_logs_error_on_redis_failure(worker, mock_redis):
-    mock_redis.lpush.side_effect = ConnectionError("redis down")
+def test_send_responses_logs_error_on_redis_failure(worker, mock_redis):
+    mock_redis.pipeline.return_value.execute.side_effect = ConnectionError("redis down")
     response = EREErrorResponse(
         ere_request_id="err-resp",
         error_type="TestError",
@@ -112,7 +116,7 @@ def test_send_response_logs_error_on_redis_failure(worker, mock_redis):
         error_detail="detail",
         timestamp=datetime.now(timezone.utc).isoformat(),
     )
-    worker._send_response(response)  # must not raise
+    worker._send_responses([response])  # must not raise
 
 
 def test_build_error_response_returns_ere_error_response():

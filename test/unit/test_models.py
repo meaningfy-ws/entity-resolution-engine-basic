@@ -1,12 +1,12 @@
 """Unit tests for domain model edge cases (error paths and utility methods)."""
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from ere.models.resolver import ClusterId, MentionId
 from ere.models.resolver.cluster import CandidateCluster, ResolutionResult
 from ere.models.resolver.similarity import MentionLink
-
 
 # ============================================================================
 # MentionLink
@@ -73,23 +73,32 @@ def test_resolution_result_as_tuples_returns_list():
 
 def test_main_exits_when_redis_connection_fails(monkeypatch):
     monkeypatch.setattr("sys.argv", ["ere"])
-    with patch("redis.Redis") as mock_redis_cls, \
-         patch("ere.entrypoints.app.configure_logging"):
+    with (
+        patch("redis.Redis") as mock_redis_cls,
+        patch("ere.entrypoints.app.configure_logging"),
+    ):
         mock_redis_cls.return_value.ping.side_effect = ConnectionError("no redis")
         with pytest.raises(SystemExit) as exc:
             from ere.entrypoints.app import main
+
             main()
     assert exc.value.code == 1
 
 
 def test_main_exits_when_service_build_fails(monkeypatch):
     monkeypatch.setattr("sys.argv", ["ere"])
-    with patch("redis.Redis") as mock_redis_cls, \
-         patch("ere.entrypoints.app.configure_logging"), \
-         patch("ere.entrypoints.app.build_entity_resolver", side_effect=RuntimeError("build fail")):
+    with (
+        patch("redis.Redis") as mock_redis_cls,
+        patch("ere.entrypoints.app.configure_logging"),
+        patch(
+            "ere.entrypoints.app.build_entity_resolver",
+            side_effect=RuntimeError("build fail"),
+        ),
+    ):
         mock_redis_cls.return_value.ping.return_value = True
         with pytest.raises(SystemExit) as exc:
             from ere.entrypoints.app import main
+
             main()
     assert exc.value.code == 1
 
@@ -99,13 +108,19 @@ def test_main_runs_loop_until_keyboard_interrupt(monkeypatch):
     mock_resolver = MagicMock()
     mock_resolver._mention_repo._con = MagicMock()
 
-    with patch("redis.Redis") as mock_redis_cls, \
-         patch("ere.entrypoints.app.configure_logging"), \
-         patch("ere.entrypoints.app.build_entity_resolver", return_value=mock_resolver), \
-         patch("ere.entrypoints.app.build_rdf_mapper", return_value=MagicMock()), \
-         patch("ere.entrypoints.app.build_entity_resolution_service", return_value=MagicMock()), \
-         patch("ere.entrypoints.app.RedisQueueWorker") as mock_worker_cls:
+    with (
+        patch("redis.Redis") as mock_redis_cls,
+        patch("ere.entrypoints.app.configure_logging"),
+        patch("ere.entrypoints.app.build_entity_resolver", return_value=mock_resolver),
+        patch("ere.entrypoints.app.build_rdf_mapper", return_value=MagicMock()),
+        patch(
+            "ere.entrypoints.app.build_entity_resolution_service",
+            return_value=MagicMock(),
+        ),
+        patch("ere.entrypoints.app.RedisQueueWorker") as mock_worker_cls,
+    ):
         mock_redis_cls.return_value.ping.return_value = True
-        mock_worker_cls.return_value.process_single_message.side_effect = KeyboardInterrupt()
+        mock_worker_cls.return_value.process_bite.side_effect = KeyboardInterrupt()
         from ere.entrypoints.app import main
+
         main()  # must return cleanly (KeyboardInterrupt caught internally)
