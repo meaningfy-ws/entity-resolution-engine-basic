@@ -1,4 +1,4 @@
-> Derived from EPIC `memory-improvement` (proposal.md) · design: design.md
+> Derived from EPIC `memory-improvement` (proposal.md) · design: design.md · benchmarks: benchmarks.md
 
 ## 0. Acceptance tests (written ahead, marked `pending`)
 
