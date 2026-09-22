@@ -10,9 +10,8 @@ class AbstractResolver(Protocol):
     """
     ERE resolver abstraction.
 
-    An ERE resolver deals with the core of the job, ie, it takes requests like
-    :class:`ere.models.ere.ERERequest` and computes results for them.
-
+    An ERE resolver deals with the core of the job, i.e., it takes requests like
+    :class:`erspec.models.ere.ERERequest` and computes results for them.
     A resolver doesn't deal with aspects like networking or asynchronous processing, these
     are concerns for services and entrypoints, which wrap around resolvers.
 
