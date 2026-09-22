@@ -63,7 +63,7 @@ def test_app_main_processes_single_request(
                 "@prefix cccev: <http://data.europa.eu/m8g/> .\n"
                 "@prefix epo: <http://data.europa.eu/a4g/ontology#> .\n"
                 "@prefix epd: <http://data.europa.eu/a4g/resource/> .\n"
-                'epd:ent001 a org:Organization ;\n'
+                "epd:ent001 a org:Organization ;\n"
                 '    epo:hasLegalName "Acme Corp" ;\n'
                 '    cccev:registeredAddress [ epo:hasCountryCode "US" ] .\n'
             ),
@@ -74,8 +74,8 @@ def test_app_main_processes_single_request(
     }
     redis_client.rpush(req_queue, json.dumps(payload).encode())
 
-    # 3. Call main() — stop loop after first message via KeyboardInterrupt
-    _real = RedisQueueWorker.process_single_message
+    # 3. Call main() — stop loop after the first bite via KeyboardInterrupt
+    _real = RedisQueueWorker.process_bite
     calls = []
 
     def _stop_after_first(self):
@@ -83,11 +83,11 @@ def test_app_main_processes_single_request(
         calls.append(result)
         raise KeyboardInterrupt  # caught by main()'s except block → clean exit
 
-    with patch.object(RedisQueueWorker, "process_single_message", _stop_after_first):
+    with patch.object(RedisQueueWorker, "process_bite", _stop_after_first):
         with patch("sys.argv", ["ere.entrypoints.app"]):
             main()
 
-    assert calls, "process_single_message was never called"
+    assert calls, "process_bite was never called"
 
     # 4. Assert response
     result = redis_client.brpop(resp_queue, timeout=5)

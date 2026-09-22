@@ -16,9 +16,8 @@ duckdb:
 cache_strategy: tf_incremental
 
 # Cluster assignment threshold: requires match_probability >= threshold for cluster join.
-# Address-enriched model is expected to be more confident; starting at 0.20.
-# Adjust downward if precision is too low; upward if recall is insufficient.
-threshold: 0.20
+# 0.7 chosen by measurement (openspec change memory-improvement, S5): 0.2 merged mostly unrelated organisations.
+threshold: 0.7
 
 # Maximum cluster references returned per resolve_request() call.
 top_n: 100
@@ -37,7 +36,7 @@ splink:
   probability_two_random_records_match: 0.003
 
   # Comparisons: identity functions and similarity scoring for pairwise evaluation.
-  # NOTE: country_code used only in blocking rules, not comparisons (to preserve EM training).
+  # NOTE: country_code is not compared: blocking guarantees it agrees, so a comparison would only inflate scores.
   # Address fields complement legal_name matching for disambiguation and confidence.
   comparisons:
 
@@ -81,24 +80,18 @@ splink:
       field: thoroughfare
       thresholds: [0.95, 0.85]
 
-    # Country code: exact match only (baseline blocking rule support).
-    # NOTE: Used in blocking only; comparison is a no-op (all same-country pairs).
-    - type: exact_match
-      field: country_code
 
   # Blocking rules: pairs are compared only if at least ONE rule fires.
-  # Expressed as field names; multi-field rules use a list.
-  #
-  # Design: country-level primary blocking, NUTS-level secondary for EU.
+  # A rule is a field name, a list of fields (all equal), or {same: <field>, similar: {field, min_jaro_winkler}}.
   blocking_rules:
-    # Primary: country code (strict rule: must match country)
-    - country_code
-
-    # Secondary (EU-specific): country + NUTS code blocking for finer granularity
-    # Enables disambiguation of large countries (e.g., Germany's 290+ regions).
-    # Falls back gracefully: if NUTS missing, country-only rule fires.
-    # Only applies when both records have NUTS (common for EU procurement data).
-    - [country_code, nuts_code]
+    # Score a pair only if both mentions share the country AND their normalised legal names
+    # (lower-case, accents stripped, letters/digits only) have Jaro-Winkler similarity >= 0.8.
+    # Chosen by measurement on test/stress/data/org-mid.csv (openspec change memory-improvement, S5):
+    # 111x fewer pairs than country-only blocking, all reference pairs kept, <0.1 % unrelated merges.
+    - same: country_code
+      similar:
+        field: legal_name
+        min_jaro_winkler: 0.8
 
   # Cold-start default m/u probabilities (used before EM training).
   # Each comparison field gets distributions for each similarity level.
@@ -113,11 +106,6 @@ splink:
         m_probabilities: [0.9, 0.6, 0.025, 0.005]
         u_probabilities: [0.00001, 0.0004, 0.004, 0.99559]
 
-      country_code:
-        # ExactMatch: match / no-match
-        # Near-deterministic: matching country codes strongly imply same country.
-        m_probabilities: [0.99, 0.01]
-        u_probabilities: [0.10, 0.90]
 
       nuts_code:
         # ExactMatch: match / no-match

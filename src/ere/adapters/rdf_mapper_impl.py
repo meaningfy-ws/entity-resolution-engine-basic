@@ -11,7 +11,7 @@ from pathlib import Path
 from erspec.models.core import EntityMention
 
 from ere.adapters.rdf_mapper import load_entity_mappings, extract_mention_attributes
-from ere.adapters.rdf_mapper_port import RDFMapper
+from ere.models.ports.rdf_mapper import RDFMapper
 from ere.models.resolver import Mention, MentionId
 
 log = logging.getLogger(__name__)
@@ -43,9 +43,7 @@ class TurtleRDFMapper(RDFMapper):
         """
         if rdf_mapping_path is None:
             rdf_mapping_path = (
-                Path(__file__).parent.parent.parent
-                / "config"
-                / "rdf_mapping.yaml"
+                Path(__file__).parent.parent.parent / "config" / "rdf_mapping.yaml"
             )
         else:
             rdf_mapping_path = Path(rdf_mapping_path)

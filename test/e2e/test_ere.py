@@ -8,20 +8,17 @@ Tests the complete entrypoint flow:
 """
 
 import json
-import os
 from datetime import datetime, timezone
 
 import pytest
-import redis
 
-from ere.adapters.factories import build_rdf_mapper
-from ere.adapters.utils import get_request_from_message, get_response_from_message
-from ere.entrypoints.queue_worker import RedisQueueWorker
-from ere.services.factories import (
-    build_entity_resolver,
+from ere.adapters.utils import get_response_from_message
+from ere.entrypoints.bootstrap import (
     build_entity_resolution_service,
+    build_entity_resolver,
+    build_rdf_mapper,
 )
-
+from ere.entrypoints.queue_worker import RedisQueueWorker
 
 # ===============================================================================
 # Fixtures

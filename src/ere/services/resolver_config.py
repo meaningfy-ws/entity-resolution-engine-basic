@@ -1,15 +1,19 @@
-"""Resolver configuration: typed extraction from YAML."""
+"""Resolver configuration: typed extraction from resolver.yaml (no environment access, no adapter types)."""
+
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ere.models.resolver import BlockingSettings
+
+DEFAULT_AUTO_TRAIN_THRESHOLD = 200
+
 
 class DuckDBConfig(BaseModel):
-    """DuckDB database configuration."""
+    """DuckDB database configuration from resolver.yaml; unset values fall back to env or defaults."""
 
-    type: str = "in-memory"  # "in-memory" or "persistent"
-    path: str = (
-        ":memory:"  # Database path: ":memory:" for in-memory, file path for persistent
-    )
+    type: str | None = None  # "in-memory" or "persistent"; None means not configured
+    path: str | None = None  # database file for persistent storage
 
 
 class ResolverConfig(BaseModel):
@@ -25,8 +29,8 @@ class ResolverConfig(BaseModel):
         top_n: Maximum number of cluster references returned per resolution request.
         cache_strategy: Strategy for maintaining Splink search space cache.
                        Default: "tf_incremental" (incremental cache updates).
-        auto_train_threshold: Number of mentions at which to trigger background training.
-                             Default: 50 (0 = disabled).
+        auto_train_threshold: Number of mentions at which training runs once; the model is then frozen.
+                             Default: 200 (0 = disabled).
         entity_fields: List of entity field names to extract from RDF (e.g. ["legal_name", "country_code"]).
                       Must match fields defined in rdf_mapping.yaml.
         duckdb: DuckDB database configuration (type and path).
@@ -40,8 +44,11 @@ class ResolverConfig(BaseModel):
     top_n: int
     entity_fields: list[str]
     cache_strategy: str = "tf_incremental"
-    auto_train_threshold: int = 50
+    auto_train_threshold: int = DEFAULT_AUTO_TRAIN_THRESHOLD
     duckdb: DuckDBConfig = Field(default_factory=DuckDBConfig)
+    blocking: BlockingSettings | None = (
+        None  # None only for configurations without a `splink` section (tests)
+    )
 
     @classmethod
     def from_dict(cls, d: dict) -> "ResolverConfig":
@@ -61,8 +68,8 @@ class ResolverConfig(BaseModel):
         """
         duckdb_config_dict = d.get("duckdb", {})
         duckdb_config = DuckDBConfig(
-            type=duckdb_config_dict.get("type", "in-memory"),
-            path=duckdb_config_dict.get("path", ":memory:"),
+            type=duckdb_config_dict.get("type"),
+            path=duckdb_config_dict.get("path"),
         )
 
         return cls(
@@ -71,6 +78,49 @@ class ResolverConfig(BaseModel):
             top_n=d["top_n"],
             entity_fields=d["entity_fields"],
             cache_strategy=d.get("cache_strategy", "tf_incremental"),
-            auto_train_threshold=d.get("auto_train_threshold", 50),
+            auto_train_threshold=d.get(
+                "auto_train_threshold", DEFAULT_AUTO_TRAIN_THRESHOLD
+            ),
             duckdb=duckdb_config,
+            blocking=_blocking_from(d),
         )
+
+
+class SplinkConfigKey(StrEnum):
+    """Keys of the `splink` section of resolver.yaml read by the resolver configuration."""
+
+    SECTION = "splink"
+    BLOCKING_RULES = "blocking_rules"
+    NORMALISED_FIELDS = "normalised_fields"
+    EM_BLOCKING_FIELD = "em_blocking_field"
+
+
+def _blocking_from(d: dict) -> BlockingSettings | None:
+    """Validated blocking settings from the `splink` section; refuses start-up on any invalid rule or field."""
+    splink = d.get(SplinkConfigKey.SECTION)
+    if splink is None:
+        return None
+    optional = {
+        key: splink[config_key]
+        for key, config_key in (
+            ("normalised_fields", SplinkConfigKey.NORMALISED_FIELDS),
+            ("em_blocking_field", SplinkConfigKey.EM_BLOCKING_FIELD),
+        )
+        if config_key in splink
+    }
+    return BlockingSettings.from_config(
+        splink.get(SplinkConfigKey.BLOCKING_RULES, []),
+        entity_fields=d["entity_fields"],
+        **optional,
+    )
+
+
+class BatchSettings(BaseModel):
+    """How much work one bite may hold and how long a draining queue is waited for."""
+
+    model_config = ConfigDict(frozen=True)
+
+    target_seconds: float = Field(default=2.0, gt=0)
+    max_mentions: int = Field(default=500, gt=0)
+    max_bytes: int = Field(default=50_000_000, gt=0)
+    linger_ms: int = Field(default=250, ge=0)

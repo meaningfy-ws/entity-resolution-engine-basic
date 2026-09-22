@@ -134,7 +134,7 @@ test-coverage: ## Generate detailed HTML coverage report
 #-----------------------------------------------------------------------------
 # Code quality commands
 #-----------------------------------------------------------------------------
-.PHONY: format lint lint-fix check-clean-code check-architecture all-quality-checks ci
+.PHONY: format lint lint-fix check-clean-code check-architecture check-specs all-quality-checks ci
 
 format: ## Format code with Ruff
 	@ echo -e "$(BUILD_PRINT)$(ICON_PROGRESS) Formatting code$(END_BUILD_PRINT)"
@@ -161,7 +161,12 @@ check-architecture: ## Validate architectural boundaries (isolated tox)
 	@ cd src && poetry run tox -e architecture
 	@ echo -e "$(BUILD_PRINT)$(ICON_DONE) Architecture checks passed$(END_BUILD_PRINT)"
 
-all-quality-checks: lint check-clean-code check-architecture ## Run all: lint + clean-code + architecture
+check-specs: ## Validate OpenSpec artifacts (structural, strict; pinned OpenSpec 1.4.1)
+	@ echo -e "$(BUILD_PRINT)$(ICON_PROGRESS) Validating OpenSpec specs and changes$(END_BUILD_PRINT)"
+	@ npx -y @fission-ai/openspec@1.4.1 validate --all --strict --no-interactive
+	@ echo -e "$(BUILD_PRINT)$(ICON_DONE) OpenSpec validation passed$(END_BUILD_PRINT)"
+
+all-quality-checks: lint check-clean-code check-architecture check-specs ## Run all: lint + clean-code + architecture + specs
 	@ echo -e "$(BUILD_PRINT)$(ICON_DONE) All quality checks passed!$(END_BUILD_PRINT)"
 
 ci: ## Full CI pipeline for GitHub Actions (tox)
