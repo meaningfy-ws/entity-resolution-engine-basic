@@ -62,6 +62,10 @@ class LinkTable:
     right_ids: tuple[str, ...]
     scores: tuple[float, ...]
 
+    def __post_init__(self) -> None:
+        if not len(self.left_ids) == len(self.right_ids) == len(self.scores):
+            raise ValueError("LinkTable columns must have equal length")
+
     def __len__(self) -> int:
         return len(self.scores)
 
